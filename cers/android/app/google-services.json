@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "685189542501",
+    "project_id": "cers-5bf5d",
+    "storage_bucket": "cers-5bf5d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685189542501:android:6a53b83ea2f67b30400c8c",
+        "android_client_info": {
+          "package_name": "com.shatechx.cers"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "685189542501-3a5o5815hib2i5t5h440rfm8kaupsg0q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBM-AOI1dJc0azlCiof6-0BjAGXzb0z8gk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "685189542501-3a5o5815hib2i5t5h440rfm8kaupsg0q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

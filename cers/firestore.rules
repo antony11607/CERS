@@ -1,0 +1,179 @@
+rules_version = '2';
+
+service cloud.firestore {
+
+  match /databases/{database}/documents {
+
+    /* ----------------------------- */
+    /* Helper Functions              */
+    /* ----------------------------- */
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function volunteerDoc() {
+      return get(/databases/$(database)/documents/volunteers/$(request.auth.uid));
+    }
+
+    function isApprovedVolunteer() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/volunteers/$(request.auth.uid))
+        && volunteerDoc().data.isApproved == true;
+    }
+
+    /* ----------------------------- */
+    /* USERS                         */
+    /* ----------------------------- */
+
+    match /user/{userId} {
+
+      allow create: if isOwner(userId);
+
+      allow read, update: if isOwner(userId);
+
+      allow delete: if false;
+    }
+
+    /* ----------------------------- */
+    /* VOLUNTEER APPROVAL            */
+    /* ----------------------------- */
+
+    match /volunteer_approval/{uid} {
+
+      allow create: if isOwner(uid);
+
+      allow read: if isOwner(uid);
+
+      allow update: if false;
+
+      allow delete: if false;
+
+      allow list: if signedIn();
+    }
+
+    /* ----------------------------- */
+    /* VOLUNTEERS                    */
+    /* ----------------------------- */
+
+    match /volunteers/{uid} {
+
+      allow read: if isOwner(uid);
+
+      allow create: if false;
+
+      allow update: if isOwner(uid);
+
+      allow delete: if false;
+
+      allow list: if signedIn();
+    }
+
+    /* ----------------------------- */
+    /* EMERGENCY CONTACTS            */
+    /* ----------------------------- */
+
+    match /emergencyContacts/{contactId} {
+
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      allow read, update, delete:
+        if signedIn()
+        && resource.data.userId == request.auth.uid;
+
+      allow list: if signedIn();
+    }
+
+    /* ----------------------------- */
+    /* EMERGENCIES                   */
+    /* ----------------------------- */
+
+    match /emergencies/{emergencyId} {
+
+      /* User creates SOS (waiting) */
+      allow create: if signedIn()
+        && request.resource.data.victimId == request.auth.uid
+        && request.resource.data.status == "waiting";
+
+      /* User creates Report Incident (reported) */
+      allow create: if signedIn()
+        && request.resource.data.victimId == request.auth.uid
+        && request.resource.data.status == "reported"
+        && request.resource.data.source == "report";
+
+      /* Any authenticated user can read */
+      allow read: if signedIn();
+
+      /* User cancels own waiting SOS */
+      allow update: if signedIn()
+        && resource.data.victimId == request.auth.uid
+        && resource.data.status == "waiting"
+        && request.resource.data.status == "cancelled";
+
+      /* User cancels own reported incident */
+      allow update: if signedIn()
+        && resource.data.victimId == request.auth.uid
+        && resource.data.status == "reported"
+        && request.resource.data.status == "cancelled";
+
+      /* User cancels accepted SOS/Report (when volunteer is on the way) */
+      allow update: if signedIn()
+        && resource.data.victimId == request.auth.uid
+        && resource.data.status == "accepted"
+        && request.resource.data.status == "cancelled";
+
+      /* User cancels SOS/Report when volunteer is en route */
+      allow update: if signedIn()
+        && resource.data.victimId == request.auth.uid
+        && resource.data.status == "en_route"
+        && request.resource.data.status == "cancelled";
+
+      /* User cancels SOS/Report when volunteer has arrived */
+      allow update: if signedIn()
+        && resource.data.victimId == request.auth.uid
+        && resource.data.status == "arrived"
+        && request.resource.data.status == "cancelled";
+
+      /* Volunteer accepts (from waiting or reported) */
+      allow update: if isApprovedVolunteer()
+        && (resource.data.status == "waiting" || resource.data.status == "reported")
+        && request.resource.data.status == "accepted"
+        && request.resource.data.assignedVolunteerId == request.auth.uid
+        && request.resource.data.victimId == resource.data.victimId
+        && request.resource.data.victimLatitude == resource.data.victimLatitude
+        && request.resource.data.victimLongitude == resource.data.victimLongitude
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      /* Volunteer starts navigation */
+      allow update: if isApprovedVolunteer()
+        && resource.data.assignedVolunteerId == request.auth.uid
+        && resource.data.status == "accepted"
+        && request.resource.data.status == "en_route";
+
+      /* Volunteer arrives (from en_route OR directly from accepted) */
+      allow update: if isApprovedVolunteer()
+        && resource.data.assignedVolunteerId == request.auth.uid
+        && resource.data.status == "en_route"
+        && request.resource.data.status == "arrived";
+
+      allow update: if isApprovedVolunteer()
+        && resource.data.assignedVolunteerId == request.auth.uid
+        && resource.data.status == "accepted"
+        && request.resource.data.status == "arrived";
+
+      /* Volunteer resolves */
+      allow update: if isApprovedVolunteer()
+        && resource.data.assignedVolunteerId == request.auth.uid
+        && resource.data.status == "arrived"
+        && request.resource.data.status == "resolved";
+
+      allow delete: if false;
+    }
+
+  }
+}
