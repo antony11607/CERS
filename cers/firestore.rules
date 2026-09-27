@@ -40,6 +40,17 @@ service cloud.firestore {
     }
 
     /* ----------------------------- */
+    /* ADMIN DASHBOARD PROFILES      */
+    /* ----------------------------- */
+
+    match /users/{userId} {
+
+      allow get: if isOwner(userId);
+
+      allow create, update, delete: if false;
+    }
+
+    /* ----------------------------- */
     /* VOLUNTEER APPROVAL            */
     /* ----------------------------- */
 
